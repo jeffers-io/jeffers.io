@@ -10,6 +10,8 @@ Resources:
     Type: "AWS::S3::Bucket"
     Properties:
       BucketName: "website.jeffers.io"
+      WebsiteConfiguration:
+        IndexDocument: "index.html"
   devCodeBuildRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -32,6 +34,12 @@ Resources:
                   - "logs:CreateLogGroup"
                   - "logs:CreateLogStream"
                   - "logs:PutLogEvents"
+                Resource:
+                  - "*"
+              - Effect: "Allow"
+                Action:
+                  - "codebuild:BatchGetBuilds"
+                  - "codebuild:StartBuild"
                 Resource:
                   - "*"
               - Effect: "Allow"
@@ -127,3 +135,60 @@ Resources:
                 Extract: true
               InputArtifacts:
                 - Name: "WebArchive"
+  devOriginAccessIdentity:
+    Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
+    Properties: 
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "The DEV origin access identity"
+  devWebsiteBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref websiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              CanonicalUser: !GetAtt "devOriginAccessIdentity.S3CanonicalUserId"
+            Action: "s3:GetObject"
+            Resource:
+              - !Join ["/", [!GetAtt "websiteBucket.Arn", "*"]]
+  devCloudFront:
+    Type: "AWS::CloudFront::Distribution"
+    DependsOn: "devOriginAccessIdentity"
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - "dev.jeffers.io"
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - "GET"
+            - "HEAD"
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: "none"
+          TargetOriginId: "devS3Origin"
+          ViewerProtocolPolicy: "redirect-to-https"
+        DefaultRootObject: "index.html"
+        Enabled: true
+        HttpVersion: "http2"
+        Origins:
+          - DomainName: !GetAtt websiteBucket.DomainName
+            Id: "devS3Origin"
+            S3OriginConfig:
+              OriginAccessIdentity: !Join ["", ["origin-access-identity/cloudfront/", !Ref "devOriginAccessIdentity"]]
+        PriceClass: "PriceClass_100"
+        ViewerCertificate:
+          AcmCertificateArn: "arn:aws:acm:us-east-1:639049943747:certificate/e87a7c77-14c0-4ec7-91a4-38a78ab00490"
+          MinimumProtocolVersion: "TLSv1.1_2016"
+          SslSupportMethod: "sni-only"
+  devARecord:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt "devCloudFront.DomainName"
+        HostedZoneId: "Z2FDTNDATAQYW2"  # Hard-coded from AWS docs
+      HostedZoneName: "jeffers.io."
+      Name: "dev.jeffers.io"
+      Type: A

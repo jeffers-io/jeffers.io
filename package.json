@@ -4,7 +4,7 @@
   "description": "The jeffers.io website",
   "main": "index.js",
   "scripts": {
-    "build": "rm -rf dist && mkdir -p dist/assets/ && cp -v index.html dist/ && npx postcss --verbose index.css > dist/index.css && npx svgo -f assets/ -o dist/assets/",
+    "build": "./build.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
