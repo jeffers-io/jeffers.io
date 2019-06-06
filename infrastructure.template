@@ -1,15 +1,15 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description: The jeffers.io site
+Description: "The jeffers.io site"
 Resources:
   artifactsBucket:
-    Type: AWS::S3::Bucket
+    Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: artifacts.jeffers.io
+      BucketName: "artifacts.jeffers.io"
   websiteBucket:
-    Type: AWS::S3::Bucket
+    Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: website.jeffers.io
+      BucketName: "website.jeffers.io"
   devCodeBuildRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -18,25 +18,29 @@ Resources:
         Statement:
           - Effect: "Allow"
             Principal:
-              Service: "codebuild.amazonaws.com"
+              Service:
+                - "codebuild.amazonaws.com"
+                - "codepipeline.amazonaws.com"
             Action: "sts:AssumeRole"
       Policies:
         - PolicyName: "DevCodeBuildPolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Effect: Allow
+              - Effect: "Allow"
                 Action:
                   - "logs:CreateLogGroup"
                   - "logs:CreateLogStream"
                   - "logs:PutLogEvents"
                 Resource:
                   - "*"
-              - Effect: Allow
+              - Effect: "Allow"
                 Action:
+                  - "s3:getObject"
                   - "s3:putObject"
                 Resource:
-                  - !GetAtt "artifactsBucket.Arn"
+                  - !Join ["/", [!GetAtt "artifactsBucket.Arn", "*"]]
+                  - !Join ["/", [!GetAtt "websiteBucket.Arn", "*"]]
               - Effect: "Allow"
                 Action:
                   - "ecr:BatchCheckLayerAvailability"
@@ -45,29 +49,81 @@ Resources:
                   - "ecr:GetAuthorizationToken"
                 Resource:
                   - "*"
-      RoleName: DevCodeBuildServiceRole
+      RoleName: "DevCodeBuildServiceRole"
   devBuild:
-    Type: AWS::CodeBuild::Project
-    DependsOn: devCodeBuildRole
+    Type: "AWS::CodeBuild::Project"
+    DependsOn: "devCodeBuildRole"
     Properties:
       Artifacts:
-        Location: !Ref artifactsBucket
+        Location: !Ref "artifactsBucket"
         OverrideArtifactName: true
-        Packaging: ZIP
-        Type: S3
+        Packaging: "ZIP"
+        Type: "S3"
       BadgeEnabled: false
-      Description: The jeffers.io dev website build
+      Description: "The jeffers.io dev website build"
       Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/standard:2.0
-        Type: LINUX_CONTAINER
-      Name: dev-jeffers-io
-      ServiceRole: !Ref devCodeBuildRole
+        ComputeType: "BUILD_GENERAL1_SMALL"
+        Image: "aws/codebuild/standard:2.0"
+        Type: "LINUX_CONTAINER"
+      Name: "dev-jeffers-io"
+      ServiceRole: !Ref "devCodeBuildRole"
       Source:
         Auth:
-          Type: OAUTH
+          Type: "OAUTH"
         Location: "https://github.com/jeffers-io/jeffers.io.git"
         ReportBuildStatus: true
-        Type: GITHUB
+        Type: "GITHUB"
       Triggers:
         Webhook: true
+  devDeploy:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      ArtifactStore:
+        Location: !Ref "artifactsBucket"
+        Type: "S3"
+      Name: "dev-deploy"
+      RoleArn: !GetAtt "devCodeBuildRole.Arn"
+      Stages:
+        - Name: "Source"
+          Actions:
+            - Name: "SourceAction"
+              ActionTypeId:
+                Category: "Source"
+                Owner: "ThirdParty"
+                Provider: "GitHub"
+                Version: "1"
+              Configuration:
+                Owner: "jeffers-io"
+                Repo: "jeffers.io"
+                PollForSourceChanges: false
+                Branch: "develop"
+                OAuthToken: "{{resolve:secretsmanager:CICD/Sources/:SecretString:GithubPersonalAccessToken}}"
+              OutputArtifacts:
+                - Name: "Sources"
+        - Name: "Build"
+          Actions:
+            - Name: "BuildAction"
+              ActionTypeId:
+                Category: "Build"
+                Owner: "AWS"
+                Provider: "CodeBuild"
+                Version: "1"
+              Configuration:
+                ProjectName: "dev-jeffers-io"
+              InputArtifacts:
+                - Name: "Sources"
+              OutputArtifacts:
+                - Name: "WebArchive"
+        - Name: "Deploy"
+          Actions:
+            - Name: "DeployAction"
+              ActionTypeId:
+                Category: "Deploy"
+                Owner: "AWS"
+                Provider: "S3"
+                Version: "1"
+              Configuration:
+                BucketName: !Ref "websiteBucket"
+                Extract: true
+              InputArtifacts:
+                - Name: "WebArchive"

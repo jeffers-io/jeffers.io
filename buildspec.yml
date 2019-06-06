@@ -8,7 +8,6 @@ phases:
   build:
     commands:
       - npm run build
-      - zip -r bundle.zip dist/*
 artifacts:
   files:
     - "**/*"
