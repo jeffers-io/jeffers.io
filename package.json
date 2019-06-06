@@ -1,0 +1,27 @@
+{
+  "name": "jeffers.io",
+  "version": "0.0.1",
+  "description": "The jeffers.io website",
+  "main": "index.js",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist/assets/ && cp -v index.html dist/ && npx postcss --verbose index.css > dist/index.css && npx svgo -f assets/ -o dist/assets/",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeffers-io/jeffers.io.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jeffers-io/jeffers.io/issues"
+  },
+  "homepage": "https://github.com/jeffers-io/jeffers.io#readme",
+  "devDependencies": {
+    "autoprefixer": "^9.6.0",
+    "browser-sync": "^2.26.5",
+    "cssnano": "^4.1.10",
+    "postcss-cli": "^6.1.2",
+    "svgo": "^1.2.2"
+  }
+}

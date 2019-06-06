@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="87px" height="87px" viewBox="0 0 87 87" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 55.1 (78136) - https://sketchapp.com -->
+    <title>Group 3</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="iPhone-8" transform="translate(-24.000000, -417.000000)">
+            <g id="Group-3" transform="translate(24.000000, 417.000000)">
+                <rect id="Rectangle" stroke="#979797" fill="#FFFFFF" x="0.5" y="0.5" width="86" height="86"></rect>
+                <g id="checkmark" transform="translate(16.000000, 14.000000)" fill-rule="nonzero">
+                    <ellipse id="Oval" stroke="#979797" fill="#D8D8D8" cx="28.5" cy="30" rx="28.5" ry="28.5714286"></ellipse>
+                    <polygon id="Combined-Shape" stroke="#424242" fill="#00BCFF" transform="translate(27.580645, 25.991071) rotate(40.000000) translate(-27.580645, -25.991071) " points="41.2953196 48.1493046 41.3948499 3.77114595 32.5856085 3.79088749 32.5091101 37.8997202 13.7894722 37.9416709 13.7664404 48.2109969"></polygon>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

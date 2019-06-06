@@ -1,0 +1,73 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: The jeffers.io site
+Resources:
+  artifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: artifacts.jeffers.io
+  websiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: website.jeffers.io
+  devCodeBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "codebuild.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "DevCodeBuildPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - "s3:putObject"
+                Resource:
+                  - !GetAtt "artifactsBucket.Arn"
+              - Effect: "Allow"
+                Action:
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:BatchGetImage"
+                  - "ecr:GetAuthorizationToken"
+                Resource:
+                  - "*"
+      RoleName: DevCodeBuildServiceRole
+  devBuild:
+    Type: AWS::CodeBuild::Project
+    DependsOn: devCodeBuildRole
+    Properties:
+      Artifacts:
+        Location: !Ref artifactsBucket
+        OverrideArtifactName: true
+        Packaging: ZIP
+        Type: S3
+      BadgeEnabled: false
+      Description: The jeffers.io dev website build
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:2.0
+        Type: LINUX_CONTAINER
+      Name: dev-jeffers-io
+      ServiceRole: !Ref devCodeBuildRole
+      Source:
+        Auth:
+          Type: OAUTH
+        Location: "https://github.com/jeffers-io/jeffers.io.git"
+        ReportBuildStatus: true
+        Type: GITHUB
+      Triggers:
+        Webhook: true

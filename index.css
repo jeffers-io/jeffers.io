@@ -1,0 +1,121 @@
+html,
+body,
+ul,
+li {
+  padding: 0;
+  margin: 0;
+}
+
+:root {
+  font-family: "Lato", sans-serif;
+}
+
+li {
+  list-style: none;
+  margin: 0;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 0 25px;
+}
+
+.container--main {
+  background: linear-gradient(215deg, #5d90ae, #fff);
+  color: #fff;
+  padding-top: 50px;
+}
+
+.title-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-weight: 900;
+  font-size: 64px;
+}
+
+.subtitle {
+  align-self: flex-end;
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 20px;
+  margin-right: 25;
+  margin-top: 10px;
+}
+
+.section-main {
+  border-top: 1px solid #fff;
+}
+
+.section-title {
+  font-size: 14px;
+  margin-top: 17px;
+}
+
+.article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.note {
+  font-size: 11px;
+  font-weight: 300;
+  margin-bottom: 20px;
+  margin-top: 22px;
+  text-align: center;
+}
+
+.examples {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 35px;
+}
+
+.example {
+  color: #000;
+  font-size: 12px;
+  font-weight: 300;
+  margin-bottom: 45px;
+  width: 87px;
+}
+
+.container--about {
+  border-top: 1px solid #ddd;
+}
+
+.staff {
+  display: flex;
+  margin-top: 25px;
+  margin-bottom: 40px;
+  justify-content: space-between;
+}
+
+.staff-member {
+  width: 40%;
+}
+
+.staff-pic {
+  width: 100%;
+}
+
+.name {
+  font-size: 13px;
+  font-weight: 400;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.job {
+  font-size: 13px;
+  font-weight: 300;
+  margin-top: 6px;
+}
+
+.contact {
+  font-weight: 900;
+  text-align: center;
+}
