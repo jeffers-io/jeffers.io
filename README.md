@@ -16,6 +16,9 @@ aws --profile jeffers.io.admin --region us-east-1 cloudformation create-stack \
   --stack-name dev-jeffers-io \
   --template-body file://infrastructure.template \
   --capabilities CAPABILITY_NAMED_IAM
+  --parameters \
+    ParameterKey=env,ParameterValue=dev \
+    ParameterKey=branch,ParameterValue=develop
 ```
 
 will get you going.

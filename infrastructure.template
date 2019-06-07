@@ -1,18 +1,29 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "The jeffers.io site"
+Description: "An environment for the jeffers.io site"
+Parameters:
+  env:
+    Type: "String"
+    AllowedValues:
+      - "dev"
+      - "prod"
+  branch:
+    Type: "String"
+    AllowedValues:
+      - "develop"
+      - "master"
 Resources:
   artifactsBucket:
     Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: "artifacts.jeffers.io"
+      BucketName: !Sub "${env}.artifacts.jeffers.io"
   websiteBucket:
     Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: "website.jeffers.io"
+      BucketName: !Sub "${env}.website.jeffers.io"
       WebsiteConfiguration:
         IndexDocument: "index.html"
-  devCodeBuildRole:
+  codeBuildRole:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -25,7 +36,7 @@ Resources:
                 - "codepipeline.amazonaws.com"
             Action: "sts:AssumeRole"
       Policies:
-        - PolicyName: "DevCodeBuildPolicy"
+        - PolicyName: !Sub "${env}CodeBuildPolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -57,10 +68,10 @@ Resources:
                   - "ecr:GetAuthorizationToken"
                 Resource:
                   - "*"
-      RoleName: "DevCodeBuildServiceRole"
-  devBuild:
+      RoleName: !Sub "${env}CodeBuildServiceRole"
+  build:
     Type: "AWS::CodeBuild::Project"
-    DependsOn: "devCodeBuildRole"
+    DependsOn: "codeBuildRole"
     Properties:
       Artifacts:
         Location: !Ref "artifactsBucket"
@@ -68,13 +79,13 @@ Resources:
         Packaging: "ZIP"
         Type: "S3"
       BadgeEnabled: false
-      Description: "The jeffers.io dev website build"
+      Description: !Sub "The jeffers.io ${env} website build"
       Environment:
         ComputeType: "BUILD_GENERAL1_SMALL"
         Image: "aws/codebuild/standard:2.0"
         Type: "LINUX_CONTAINER"
-      Name: "dev-jeffers-io"
-      ServiceRole: !Ref "devCodeBuildRole"
+      Name: !Sub "${env}-jeffers-io"
+      ServiceRole: !Ref "codeBuildRole"
       Source:
         Auth:
           Type: "OAUTH"
@@ -82,15 +93,20 @@ Resources:
         ReportBuildStatus: true
         Type: "GITHUB"
       Triggers:
+        FilterGroups:
+          -
+            -
+              Pattern: "PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED"
+              Type: "EVENT"
         Webhook: true
-  devDeploy:
+  deploy:
     Type: "AWS::CodePipeline::Pipeline"
     Properties:
       ArtifactStore:
         Location: !Ref "artifactsBucket"
         Type: "S3"
-      Name: "dev-deploy"
-      RoleArn: !GetAtt "devCodeBuildRole.Arn"
+      Name: !Sub "${env}-deploy"
+      RoleArn: !GetAtt "codeBuildRole.Arn"
       Stages:
         - Name: "Source"
           Actions:
@@ -104,7 +120,7 @@ Resources:
                 Owner: "jeffers-io"
                 Repo: "jeffers.io"
                 PollForSourceChanges: false
-                Branch: "develop"
+                Branch: !Ref "branch"
                 OAuthToken: "{{resolve:secretsmanager:CICD/Sources/:SecretString:GithubPersonalAccessToken}}"
               OutputArtifacts:
                 - Name: "Sources"
@@ -117,7 +133,7 @@ Resources:
                 Provider: "CodeBuild"
                 Version: "1"
               Configuration:
-                ProjectName: "dev-jeffers-io"
+                ProjectName: !Sub "${env}-jeffers-io"
               InputArtifacts:
                 - Name: "Sources"
               OutputArtifacts:
@@ -135,7 +151,7 @@ Resources:
                 Extract: true
               InputArtifacts:
                 - Name: "WebArchive"
-  developGithubWebhook:
+  githubWebhook:
     Type: "AWS::CodePipeline::Webhook"
     Properties:
       Authentication: "GITHUB_HMAC"
@@ -143,18 +159,18 @@ Resources:
         SecretToken: "{{resolve:secretsmanager:CICD/Sources/:SecretString:GithubWebhookSecret}}"
       Filters:
         - JsonPath: "$.ref"
-          MatchEquals: "refs/heads/develop"
-      Name: dev-github-webhook
+          MatchEquals: !Sub "refs/heads/${branch}"
+      Name: !Sub "${env}-github-webhook"
       RegisterWithThirdParty: true
       TargetAction: "SourceAction"
-      TargetPipeline: !Ref devDeploy
-      TargetPipelineVersion: !GetAtt "devDeploy.Version"
-  devOriginAccessIdentity:
+      TargetPipeline: !Ref deploy
+      TargetPipelineVersion: !GetAtt "deploy.Version"
+  originAccessIdentity:
     Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: "The DEV origin access identity"
-  devWebsiteBucketPolicy:
+        Comment: !Sub "The ${env} origin access identity"
+  websiteBucketPolicy:
     Type: "AWS::S3::BucketPolicy"
     Properties:
       Bucket: !Ref websiteBucket
@@ -163,46 +179,46 @@ Resources:
         Statement:
           - Effect: "Allow"
             Principal:
-              CanonicalUser: !GetAtt "devOriginAccessIdentity.S3CanonicalUserId"
+              CanonicalUser: !GetAtt "originAccessIdentity.S3CanonicalUserId"
             Action: "s3:GetObject"
             Resource:
               - !Join ["/", [!GetAtt "websiteBucket.Arn", "*"]]
-  devCloudFront:
-    Type: "AWS::CloudFront::Distribution"
-    DependsOn: "devOriginAccessIdentity"
-    Properties:
-      DistributionConfig:
-        Aliases:
-          - "dev.jeffers.io"
-        DefaultCacheBehavior:
-          AllowedMethods:
-            - "GET"
-            - "HEAD"
-          ForwardedValues:
-            QueryString: false
-            Cookies:
-              Forward: "none"
-          TargetOriginId: "devS3Origin"
-          ViewerProtocolPolicy: "redirect-to-https"
-        DefaultRootObject: "index.html"
-        Enabled: true
-        HttpVersion: "http2"
-        Origins:
-          - DomainName: !GetAtt websiteBucket.DomainName
-            Id: "devS3Origin"
-            S3OriginConfig:
-              OriginAccessIdentity: !Join ["", ["origin-access-identity/cloudfront/", !Ref "devOriginAccessIdentity"]]
-        PriceClass: "PriceClass_100"
-        ViewerCertificate:
-          AcmCertificateArn: "arn:aws:acm:us-east-1:639049943747:certificate/e87a7c77-14c0-4ec7-91a4-38a78ab00490"
-          MinimumProtocolVersion: "TLSv1.1_2016"
-          SslSupportMethod: "sni-only"
-  devARecord:
-    Type: "AWS::Route53::RecordSet"
-    Properties:
-      AliasTarget:
-        DNSName: !GetAtt "devCloudFront.DomainName"
-        HostedZoneId: "Z2FDTNDATAQYW2"  # Hard-coded from AWS docs
-      HostedZoneName: "jeffers.io."
-      Name: "dev.jeffers.io"
-      Type: A
+  #cloudFront:
+    #Type: "AWS::CloudFront::Distribution"
+    #DependsOn: "originAccessIdentity"
+    #Properties:
+      #DistributionConfig:
+        #Aliases:
+          #- !Sub "${env}.jeffers.io"
+        #DefaultCacheBehavior:
+          #AllowedMethods:
+            #- "GET"
+            #- "HEAD"
+          #ForwardedValues:
+            #QueryString: false
+            #Cookies:
+              #Forward: "none"
+          #TargetOriginId: !Sub "${env}S3Origin"
+          #ViewerProtocolPolicy: "redirect-to-https"
+        #DefaultRootObject: "index.html"
+        #Enabled: true
+        #HttpVersion: "http2"
+        #Origins:
+          #- DomainName: !GetAtt websiteBucket.DomainName
+            #Id: !Sub "${env}S3Origin"
+            #S3OriginConfig:
+              #OriginAccessIdentity: !Join ["", ["origin-access-identity/cloudfront/", !Ref "originAccessIdentity"]]
+        #PriceClass: "PriceClass_100"
+        #ViewerCertificate:
+          #AcmCertificateArn: "arn:aws:acm:us-east-1:639049943747:certificate/e87a7c77-14c0-4ec7-91a4-38a78ab00490"
+          #MinimumProtocolVersion: "TLSv1.1_2016"
+          #SslSupportMethod: "sni-only"
+  #aRecord:
+    #Type: "AWS::Route53::RecordSet"
+    #Properties:
+      #AliasTarget:
+        #DNSName: !GetAtt "cloudFront.DomainName"
+        #HostedZoneId: "Z2FDTNDATAQYW2"  # Hard-coded from AWS docs
+      #HostedZoneName: "jeffers.io."
+      #Name: !Sub "${env}.jeffers.io"
+      #Type: A

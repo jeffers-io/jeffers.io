@@ -173,3 +173,9 @@ li {
     font-size: 2vw;
   }
 }
+
+@media (min-width: 1000px) {
+  .container {
+    padding: 200px;
+  }
+}
