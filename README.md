@@ -7,7 +7,8 @@ See `infrastructure.template` for the CloudFormation setup.
 
 ## Creating the Stack
 
-The `infrastructure.template` builds out all the AWS infrastrcture.
+Domain registration and certification creation is manual, but then
+`infrastructure.template` builds out all the AWS infrastructure.
 
 Something like
 
@@ -29,11 +30,17 @@ will get you going.
 npm run build
 ```
 
+but you shouldn't need to use this locally. It's taken care of by CI/CD.
+
+Pull requests should kick off a CodeBuild too.
+
 ## Local Dev
 
 ```
 npm run serve
 ```
+
+for a life-reloading local server.
 
 ## Deployment
 

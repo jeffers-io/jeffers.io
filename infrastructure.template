@@ -183,42 +183,42 @@ Resources:
             Action: "s3:GetObject"
             Resource:
               - !Join ["/", [!GetAtt "websiteBucket.Arn", "*"]]
-  #cloudFront:
-    #Type: "AWS::CloudFront::Distribution"
-    #DependsOn: "originAccessIdentity"
-    #Properties:
-      #DistributionConfig:
-        #Aliases:
-          #- !Sub "${env}.jeffers.io"
-        #DefaultCacheBehavior:
-          #AllowedMethods:
-            #- "GET"
-            #- "HEAD"
-          #ForwardedValues:
-            #QueryString: false
-            #Cookies:
-              #Forward: "none"
-          #TargetOriginId: !Sub "${env}S3Origin"
-          #ViewerProtocolPolicy: "redirect-to-https"
-        #DefaultRootObject: "index.html"
-        #Enabled: true
-        #HttpVersion: "http2"
-        #Origins:
-          #- DomainName: !GetAtt websiteBucket.DomainName
-            #Id: !Sub "${env}S3Origin"
-            #S3OriginConfig:
-              #OriginAccessIdentity: !Join ["", ["origin-access-identity/cloudfront/", !Ref "originAccessIdentity"]]
-        #PriceClass: "PriceClass_100"
-        #ViewerCertificate:
-          #AcmCertificateArn: "arn:aws:acm:us-east-1:639049943747:certificate/e87a7c77-14c0-4ec7-91a4-38a78ab00490"
-          #MinimumProtocolVersion: "TLSv1.1_2016"
-          #SslSupportMethod: "sni-only"
-  #aRecord:
-    #Type: "AWS::Route53::RecordSet"
-    #Properties:
-      #AliasTarget:
-        #DNSName: !GetAtt "cloudFront.DomainName"
-        #HostedZoneId: "Z2FDTNDATAQYW2"  # Hard-coded from AWS docs
-      #HostedZoneName: "jeffers.io."
-      #Name: !Sub "${env}.jeffers.io"
-      #Type: A
+  cloudFront:
+    Type: "AWS::CloudFront::Distribution"
+    DependsOn: "originAccessIdentity"
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Sub "${env}.jeffers.io"
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - "GET"
+            - "HEAD"
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: "none"
+          TargetOriginId: !Sub "${env}S3Origin"
+          ViewerProtocolPolicy: "redirect-to-https"
+        DefaultRootObject: "index.html"
+        Enabled: true
+        HttpVersion: "http2"
+        Origins:
+          - DomainName: !GetAtt websiteBucket.DomainName
+            Id: !Sub "${env}S3Origin"
+            S3OriginConfig:
+              OriginAccessIdentity: !Join ["", ["origin-access-identity/cloudfront/", !Ref "originAccessIdentity"]]
+        PriceClass: "PriceClass_100"
+        ViewerCertificate:
+          AcmCertificateArn: "arn:aws:acm:us-east-1:639049943747:certificate/e87a7c77-14c0-4ec7-91a4-38a78ab00490"
+          MinimumProtocolVersion: "TLSv1.1_2016"
+          SslSupportMethod: "sni-only"
+  aRecord:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt "cloudFront.DomainName"
+        HostedZoneId: "Z2FDTNDATAQYW2"  # Hard-coded from AWS docs
+      HostedZoneName: "jeffers.io."
+      Name: !Sub "${env}.jeffers.io"
+      Type: A
