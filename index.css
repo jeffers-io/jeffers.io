@@ -18,6 +18,8 @@ li {
 .container {
   display: flex;
   flex-direction: column;
+  margin-left: auto;
+  margin-right: auto;
   padding: 0 25px;
 }
 
@@ -34,12 +36,12 @@ li {
 
 .title {
   font-weight: 900;
-  font-size: 64px;
+  font-size: 18vw;
 }
 
 .subtitle {
   align-self: flex-end;
-  font-size: 20px;
+  font-size: 5vw;
   font-weight: 900;
   margin-bottom: 20px;
   margin-right: 25;
@@ -51,14 +53,18 @@ li {
 }
 
 .section-title {
-  font-size: 14px;
+  font-size: 4vw;
   margin-top: 17px;
 }
 
 .article {
-  display: flex;
   align-items: center;
+  display: flex;
   justify-content: space-between;
+}
+
+.article-logo {
+  width: 10vw;
 }
 
 .note {
@@ -77,33 +83,50 @@ li {
 
 .example {
   color: #000;
-  font-size: 12px;
+  font-size: 3vw;
   font-weight: 300;
   margin-bottom: 45px;
-  width: 87px;
+  width: 22vw;
+}
+
+.example-logo {
+  width: 100%;
 }
 
 .container--about {
   border-top: 1px solid #ddd;
 }
 
-.staff {
+.abouts {
   display: flex;
   margin-top: 25px;
   margin-bottom: 40px;
   justify-content: space-between;
 }
 
+.about-blurb {
+  width: 30%;
+  font-size: 3vw;
+}
+
+.tech {
+  font-size: 2vw;
+}
+
 .staff-member {
-  width: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 30%;
 }
 
 .staff-pic {
   width: 100%;
+  max-width: 200px;
 }
 
 .name {
-  font-size: 13px;
+  font-size: 4vw;
   font-weight: 400;
   margin-top: 10px;
   margin-bottom: 0;
@@ -113,9 +136,40 @@ li {
   font-size: 13px;
   font-weight: 300;
   margin-top: 6px;
+  max-width: 200px;
 }
 
 .contact {
   font-weight: 900;
   text-align: center;
+}
+
+@media (min-width: 800px) {
+  .container {
+    padding: 0 100px;
+  }
+
+  .article {
+    font-size: 3vw;
+  }
+
+  .note {
+    font-size: 1vw;
+  }
+
+  .example {
+    font-size: 2vw;
+  }
+
+  .about-blurb {
+    font-size: 2vw;
+  }
+
+  .tech {
+    font-size: 1vw;
+  }
+
+  .contact {
+    font-size: 2vw;
+  }
 }

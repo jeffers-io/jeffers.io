@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "./build.sh",
+    "serve": "npx browser-sync start --server --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
