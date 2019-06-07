@@ -135,9 +135,23 @@ Resources:
                 Extract: true
               InputArtifacts:
                 - Name: "WebArchive"
+  developGithubWebhook:
+    Type: "AWS::CodePipeline::Webhook"
+    Properties:
+      Authentication: "GITHUB_HMAC"
+      AuthenticationConfiguration:
+        SecretToken: "{{resolve:secretsmanager:CICD/Sources/:SecretString:GithubWebhookSecret}}"
+      Filters:
+        - JsonPath: "$.ref"
+          MatchEquals: "refs/heads/develop"
+      Name: dev-github-webhook
+      RegisterWithThirdParty: true
+      TargetAction: "SourceAction"
+      TargetPipeline: !Ref devDeploy
+      TargetPipelineVersion: !GetAtt "devDeploy.Version"
   devOriginAccessIdentity:
     Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
-    Properties: 
+    Properties:
       CloudFrontOriginAccessIdentityConfig:
         Comment: "The DEV origin access identity"
   devWebsiteBucketPolicy:
