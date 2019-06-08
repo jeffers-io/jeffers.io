@@ -15,6 +15,13 @@ li {
   margin: 0;
 }
 
+code {
+  background: #ccc;
+  border-radius: 3px;
+  padding: 0 2px;
+  color: #fd002c;
+}
+
 .container {
   display: flex;
   flex-direction: column;
@@ -59,8 +66,10 @@ li {
 
 .article {
   align-items: center;
+  color: #fff;
   display: flex;
   justify-content: space-between;
+  text-decoration: none;
 }
 
 .article-logo {
@@ -116,7 +125,7 @@ li {
 .staff-member {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /*align-items: center;*/
   width: 30%;
 }
 
@@ -130,6 +139,7 @@ li {
   font-weight: 400;
   margin-top: 10px;
   margin-bottom: 0;
+  align-self: left;
 }
 
 .job {
@@ -174,8 +184,53 @@ li {
   }
 }
 
-@media (min-width: 1000px) {
+@media (min-width: 1200px) {
   .container {
-    padding: 200px;
+    padding: 0 25%;
+  }
+
+  .title {
+    font-size: 120px;
+  }
+
+  .subtitle {
+    font-size: 48px;
+  }
+
+  .section-title {
+    font-size: 18px;
+  }
+
+  .article {
+    font-size: 20px;
+  }
+
+  .note {
+    font-size: 14px;
+  }
+
+  .example {
+    font-size: 16px;
+    width: 200px;
+  }
+
+  .about-blurb {
+    font-size: 16px;
+  }
+
+  .tech {
+    font-size: 14px;
+  }
+
+  .name {
+    font-size: 14px;
+  }
+
+  .tech {
+    font-size: 12px;
+  }
+
+  .contact {
+    font-size: 18px;
   }
 }

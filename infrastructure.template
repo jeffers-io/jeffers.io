@@ -12,6 +12,9 @@ Parameters:
     AllowedValues:
       - "develop"
       - "master"
+Conditions:
+  isProd:
+    !Equals [!Ref env, "prod"]
 Resources:
   artifactsBucket:
     Type: "AWS::S3::Bucket"
@@ -73,19 +76,13 @@ Resources:
     Type: "AWS::CodeBuild::Project"
     DependsOn: "codeBuildRole"
     Properties:
-      Artifacts:
-        Location: !Ref "artifactsBucket"
-        OverrideArtifactName: true
-        Packaging: "ZIP"
-        Type: "S3"
-      BadgeEnabled: false
+      Name: !Sub "${env}-jeffers-io"
       Description: !Sub "The jeffers.io ${env} website build"
+      ServiceRole: !Ref "codeBuildRole"
       Environment:
         ComputeType: "BUILD_GENERAL1_SMALL"
         Image: "aws/codebuild/standard:2.0"
         Type: "LINUX_CONTAINER"
-      Name: !Sub "${env}-jeffers-io"
-      ServiceRole: !Ref "codeBuildRole"
       Source:
         Auth:
           Type: "OAUTH"
@@ -99,6 +96,12 @@ Resources:
               Pattern: "PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED"
               Type: "EVENT"
         Webhook: true
+      Artifacts:
+        Location: !Ref "artifactsBucket"
+        OverrideArtifactName: true
+        Packaging: "ZIP"
+        Type: "S3"
+      BadgeEnabled: false
   deploy:
     Type: "AWS::CodePipeline::Pipeline"
     Properties:
@@ -189,7 +192,7 @@ Resources:
     Properties:
       DistributionConfig:
         Aliases:
-          - !Sub "${env}.jeffers.io"
+          - !If [isProd, "jeffers.io", !Sub "${env}.jeffers.io"]
         DefaultCacheBehavior:
           AllowedMethods:
             - "GET"
@@ -210,7 +213,7 @@ Resources:
               OriginAccessIdentity: !Join ["", ["origin-access-identity/cloudfront/", !Ref "originAccessIdentity"]]
         PriceClass: "PriceClass_100"
         ViewerCertificate:
-          AcmCertificateArn: "arn:aws:acm:us-east-1:639049943747:certificate/e87a7c77-14c0-4ec7-91a4-38a78ab00490"
+          AcmCertificateArn: "arn:aws:acm:us-east-1:639049943747:certificate/1849f8a8-90c0-457f-93c9-8cd8b5aa42ea"
           MinimumProtocolVersion: "TLSv1.1_2016"
           SslSupportMethod: "sni-only"
   aRecord:
@@ -220,5 +223,5 @@ Resources:
         DNSName: !GetAtt "cloudFront.DomainName"
         HostedZoneId: "Z2FDTNDATAQYW2"  # Hard-coded from AWS docs
       HostedZoneName: "jeffers.io."
-      Name: !Sub "${env}.jeffers.io"
+      Name: !If [isProd, "jeffers.io", !Sub "${env}.jeffers.io"]
       Type: A

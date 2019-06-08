@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="/index.css" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Lato:300,400,900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/dracula.css" />
+    <script src="/highlight.pack.js"></script>
+    <title>Jeffers</title>
+  </head>
+  <body>
+    <div class="container container--main">
+      <div class="title-container">
+        <span class="title">jeffers</span>
+        <span class="subtitle">software-making</span>
+      </div>
+    </div>
+    <div class="container">
+      <h1 id="cicding-your-aws-static-site-for-fun-kinda">CI/CD&#39;ing Your AWS Static Site For Fun Kinda</h1>
+<p>Don&#39;t you hate it when you start in on some project and it&#39;s <em>way</em>
+over-complicated and over-engineered and you have to spend hours just getting
+caught up on how basic stuff is set up?</p>
+<p>Anyway, let&#39;s walk through creating a 225+ line <a href="https://github.com/jeffers-io/jeffers.io/blob/master/infrastructure.template">AWS CloudFormation template</a> for
+hosting a simple static website...</p>
+<h2 id="s3-and-cloudfront">S3 and CloudFront</h2>
+<p>Throwing a static website up on AWS is pretty great. You basically just create
+an S3 bucket, flag it for &quot;static website hosting&quot;, and <code>aws s3 cp index.html
+s3://your-bucket</code> and you are a member of the World Wide Web.</p>
+<p>Thirty seconds after that you&#39;ll realize you want to register your custom domain
+through Route53, and five minutes later you&#39;ll realize you want a CloudFront
+distribution in front of your bucket. CloudFront lets you get your HTTPS on with
+a free Amazon-provided TLS certificate and you can point a Route53 A Record at
+your CloudFront distribution alias.</p>
+<p>You&#39;re definitely <em>technically</em> done at this point...but why not throw in some
+of the (actually pretty nice) AWS CI/CD tooling while you&#39;re at it.</p>
+<h2 id="codebuild">CodeBuild</h2>
+<p>The number of <strong>Code*</strong> offerings on the AWS dashboard is a little confusing at
+first (there&#39;s even one actually called CodeStar) but for static-asset sites
+just hone in on <strong>CodeBuild</strong> and <strong>CodePipeline</strong>.</p>
+<p>CodeBuild is yer classic CI &quot;build&quot; server in a serverless easy-to-configure
+form. Check out this bit of CloudFormation template:</p>
+<pre><code class="language-yaml">  build:
+    Type: &quot;AWS::CodeBuild::Project&quot;
+    DependsOn: &quot;codeBuildRole&quot;
+    Properties:
+      Name: !Sub &quot;${env}-jeffers-io&quot;
+      Description: !Sub &quot;The jeffers.io ${env} website build&quot;
+      ServiceRole: !Ref &quot;codeBuildRole&quot;
+      Environment:
+        ComputeType: &quot;BUILD_GENERAL1_SMALL&quot;
+        Image: &quot;aws/codebuild/standard:2.0&quot;
+        Type: &quot;LINUX_CONTAINER&quot;
+      Source:
+        Auth:
+          Type: &quot;OAUTH&quot;
+        Location: &quot;https://github.com/jeffers-io/jeffers.io.git&quot;
+        ReportBuildStatus: true
+        Type: &quot;GITHUB&quot;
+      Triggers:
+        FilterGroups:
+          -
+            -
+              Pattern: &quot;PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED&quot;
+              Type: &quot;EVENT&quot;
+        Webhook: true
+      Artifacts:
+        Location: !Ref &quot;artifactsBucket&quot;
+        OverrideArtifactName: true
+        Packaging: &quot;ZIP&quot;
+        Type: &quot;S3&quot;
+      BadgeEnabled: false</code></pre>
+<p>There&#39;s several parts to this setup:</p>
+<p><strong>buildspec.yml:</strong> Put this in the root of your project. It&#39;s straightforward.
+Give it a runtime (we&#39;re using Node.js) and a list of commands (run-of-the-mill
+static website CSS/SVG minification and file moving-around happens in a bash
+script) and you&#39;re done. Notice the weird <code>chmod a+x build.sh</code> though...AWS can
+lose track of file executable perms in the pull process so you might need stuff
+like this. Timestamp your artifact here for easy rollbacks later.</p>
+<pre><code class="language-yaml">version: 0.2
+phases:
+  install:
+    runtime-versions:
+      nodejs: 10
+    commands:
+      - npm install
+      - chmod a+x build.sh
+  build:
+    commands:
+      - npm run build
+artifacts:
+  files:
+    - &quot;**/*&quot;
+  base-directory: dist
+  name: bundle-$(date +%s)</code></pre>
+<p><strong>Service Role:</strong> the necessary evil of using any AWS service. You have to get a
+good handle on who is doing what and if they&#39;re allowed to do that stuff. This
+will be taken care of for you if you&#39;re using the Web Console to set this up but
+that&#39;s only for not-cool peops. (Disclosure: every part of this setup was
+created first-time-through via the Console because CloudFormation template
+writing from scratch can be sometimes mysterious.)</p>
+<p>The
+<a href="https://docs.aws.amazon.com/codebuild/latest/userguide/setting-up.html#setting-up-service-role">docs</a>
+explain. This is a &quot;service role&quot; so you need to make sure the
+service <code>codebuild.amazonaws.com</code> can &quot;assume the role&quot; with an &quot;Assume Role
+Policy Document&quot; and <em>then</em> you need to write a policy document to cover all the
+operations your project will engage in. For static-site building and deploying,
+you need full ECR/ECS access (so CodeBuild can get the build environment
+container running, more below), S3 bucket access (for storing artifacts) and the
+usual CloudWatch Logs perms.</p>
+<p><strong>Environment:</strong> One of the nice and easy things about CodeBuild. When you build
+your project you need a particular dev environment set up. Eg, a certain version
+of Node.js and some standard Linux commands. You&#39;re tell CodeBuild &quot;give me a
+standard Ubuntu container with this much compute resources&quot;. You can also
+specify custom containers and pull them down from ECR at build-time to get
+fancier/faster with your builds.</p>
+<p><strong>Source:</strong> Where to get your codez. AWS CodeCommit is the easiest, but the
+GitHub integration works great too once you get the config down. Later on in the
+CodePipeline section you set up a GitHub Personal Access Token and that takes
+care of auth.</p>
+<p><strong>Triggers:</strong> CodeBuild even sets up a Webhook for you. Just <code>Webhook: true</code>
+will get this build building for all your repo&#39;s events, but we actually want
+the <em>CodePipeline</em> to respond to those and so here we filter down to just pull
+request events.</p>
+<p><strong>Artifacts:</strong> The results of the build. Give it a bucket, tell it to override
+the name (so your custom <code>buildspec.yml</code> name gets used instead) and have it zip
+up the results.</p>
+<h2 id="codepipeline">CodePipeline</h2>
+<p>Exactly what is sounds like: a sequence of CI/CD operations that you trigger off
+certain events. This <em>consumes</em> your previously defined CodeBuild process and
+adds on deployment. You also have to define the Sources (yes, even though you
+already did that in CodeBuild) and you&#39;ll also automatically get a GitHub Webhook
+to kick off your builds.</p>
+<p>One note: don&#39;t get sidetracked on <em>CodeDeploy</em> when trying to deploy your
+static assets into your S3 bucket. S3 itself is a &quot;deploy provider&quot; and you just
+give CodePipeline your bucket details to get it to unzip and dump your assets
+into your website bucket.</p>
+<h2 id="cloudformation">CloudFormation</h2>
+<p>We&#39;re purposely being thorough here. So the last step is to put all of this
+into a CloudFormation template, parameterize it, and deploy a <code>dev</code> and <code>prod</code>
+version.</p>
+<p>Making these templates the first time is a LOT of time-consuming
+trial-and-error...but it <em>is</em> really nice to have your whole setup formally
+defined. And you get your subsequent environments with just an additional AWS
+CLI call.</p>
+<p>Bam. Make some local changes on <code>develop</code>, push, review the real thing on
+<code>dev.lotsa-work-for-website-deploy.com</code> and then merge and push master to get
+the real thing out there.</p>
+
+    </div>
+    <script>
+      hljs.initHighlightingOnLoad();
+    </script>
+  </body>
+</html>
