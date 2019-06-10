@@ -193,6 +193,15 @@ Resources:
       DistributionConfig:
         Aliases:
           - !If [isProd, "jeffers.io", !Sub "${env}.jeffers.io"]
+        CustomErrorResponses:
+          - ErrorCachingMinTTL: 300
+            ErrorCode: 403
+            ResponseCode: 404
+            ResponsePagePath: "/error_pages/404.html"
+          - ErrorCachingMinTTL: 300
+            ErrorCode: 404
+            ResponseCode: 404
+            ResponsePagePath: "/error_pages/404.html"
         DefaultCacheBehavior:
           AllowedMethods:
             - "GET"

@@ -1,4 +1,4 @@
-# CI/CD'ing Your AWS Static Site For Fun Kinda
+# CI/CD Your AWS Static Site For Fun Kinda
 
 Don't you hate it when you start in on some project and it's *way*
 over-complicated and over-engineered and you have to spend hours just getting
