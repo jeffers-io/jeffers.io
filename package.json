@@ -20,7 +20,7 @@
   "homepage": "https://github.com/jeffers-io/jeffers.io#readme",
   "devDependencies": {
     "autoprefixer": "^9.6.0",
-    "browser-sync": "^2.26.5",
+    "browser-sync": "^2.27.10",
     "cssnano": "^4.1.10",
     "eslint": "^5.16.0",
     "marked": "^0.6.2",
